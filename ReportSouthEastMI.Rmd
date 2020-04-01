@@ -1,0 +1,94 @@
+---
+title: "South East Michigan Covid-19 Report"
+author: "Roger Pique-Regi"
+date: "3/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(usmap)
+```
+
+Data downloaded from <https://github.com/nytimes/covid-19-data> assembled by The New York Times.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+dc = read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
+cat("Last Update:",as.character.Date(select(dc[nrow(dc),],date))[4],"\n")
+```
+
+Counties aggregated: "Wayne","Oakland","Macomb","Livingston","St. Clair","Lapeer","Genesee","Washtenaw","Monroe","Lenawee"
+
+```{r echo=FALSE}
+dd <- dc %>% filter(state=="Michigan",county %in% c("Wayne","Oakland","Macomb","Livingston","St. Clair","Lapeer","Genesee","Washtenaw","Monroe","Lenawee")) %>% group_by(fips) %>% summarise_all(last) %>% left_join(countypop,by="fips") %>% mutate(drate=deaths/cases*100,dpoprate=deaths/pop_2015*1E6,cpoprate=cases/pop_2015*1E6)
+plot_usmap(data=dd,values="drate",include="MI") + labs(fill = "%Deaths/Cases") 
+#plot_usmap(data=dd,values="dpoprate",include=dd$fips) + labs(fill = "Deaths/Million(pop)") 
+#plot_usmap(data=dd,values="cpoprate",include=dd$fips) + labs(fill = "Cases/Million(pop)") 
+```
+
+## South East Michigan Deaths
+```{r echo=FALSE}
+dd <- dc %>% filter(state=="Michigan",county %in% c("Wayne","Oakland","Macomb","Livingston","St. Clair","Lapeer","Genesee","Washtenaw","Monroe","Lenawee")) %>% group_by(date) %>% summarize(deaths=sum(deaths),cases=sum(cases)) %>% filter(deaths>=10) %>% mutate(days=(rank(date)-1))
+ggplot(dd,aes(x=days,y=deaths)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(trans='log10',limits = c(10,NA)) +
+  geom_abline(aes(intercept=log10(10),slope=log10(2)/2),lty=3) +
+  geom_abline(aes(intercept=log10(10),slope=log10(2)/3),lty=2) +
+  geom_text(aes(label="2x in 2 days",x=2,y=20,angle=atan2(1,2)/pi*180),hjust=0,vjust=0) +
+    geom_text(aes(label="2x in 3 days",x=3,y=20,angle=atan2(1,3)/pi*180),hjust=0,vjust=0) +
+  xlab("Days since 10th death") + ylab("Total deaths") +
+  theme_bw()
+```
+
+Dotted line 2x increase every two days. 
+
+Dashed line 2x increase every three days. 
+
+## South East Michigan Cases
+```{r echo=FALSE}
+dd <- dc %>% filter(state=="Michigan",county %in% c("Wayne","Oakland","Macomb","Livingston","St. Clair","Lapeer","Genesee","Washtenaw","Monroe","Lenawee")) %>% group_by(date) %>% summarize(deaths=sum(deaths),cases=sum(cases)) %>% filter(cases>=100) %>% mutate(days=(rank(date)-1))
+
+ggplot(dd,aes(x=days,y=cases)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(trans='log10',limits = c(100,NA)) +
+  geom_abline(aes(intercept=log10(100),slope=log10(2)/2),lty=3) +
+  geom_abline(aes(intercept=log10(100),slope=log10(2)/3),lty=2) +
+  geom_text(aes(label="2x in 2 days",x=2,y=200,angle=atan2(1,2)/pi*180),hjust=0,vjust=0) +
+    geom_text(aes(label="2x in 3 days",x=3,y=200,angle=atan2(1,3)/pi*180),hjust=0,vjust=0) +
+  xlab("Days since 100th detected case") + ylab("Detected cases") +
+  theme_bw()
+knitr::kable(dd)
+```
+
+## Deaths in Wayne, Oakland and Macomb
+```{r echo=FALSE}
+dd <- dc %>% filter(state=="Michigan",county %in% c("Wayne","Oakland","Macomb")) %>% filter(deaths>=10) %>% group_by(county) %>% mutate(days=rank(date)-1)
+
+ggplot(dd,aes(x=days,y=deaths,col=county)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(trans='log10',limits = c(10,NA)) +
+  geom_abline(aes(intercept=log10(10),slope=log10(2)/2),lty=3) +
+  geom_abline(aes(intercept=log10(10),slope=log10(2)/3),lty=2) +
+    geom_text(aes(label="2x in 2 days",x=2,y=20,angle=atan2(1,2)/pi*180),hjust=0,vjust=0) +
+    geom_text(aes(label="2x in 3 days",x=3,y=20,angle=atan2(1,3)/pi*180),hjust=0,vjust=0) +
+  xlab("Days since 10th death") + ylab("Total deaths") +
+  theme_bw()
+```
+
+## Cases in Wayne, Oakland and Macomb
+```{r echo=FALSE}
+dd <- dc %>% filter(state=="Michigan",county %in% c("Wayne","Oakland","Macomb")) %>% 
+  filter(cases>=100) %>% group_by(county) %>% 
+  mutate(days=rank(date)-1)
+
+ggplot(dd,aes(x=days,y=cases,col=county)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(trans='log10',limits = c(100,NA)) +
+  geom_abline(aes(intercept=log10(min(cases)),slope=log10(2)/2),lty=3) + 
+  geom_abline(aes(intercept=log10(100),slope=log10(2)/3),lty=2) + 
+    geom_text(aes(label="2x in 2 days",x=2,y=200,angle=atan2(1,2)/pi*180),hjust=0,vjust=0) +
+    geom_text(aes(label="2x in 3 days",x=3,y=200,angle=atan2(1,3)/pi*180),hjust=0,vjust=0) +
+    xlab("Days since 100th detected case") + ylab("Detected cases") +
+  theme_bw()
+```
