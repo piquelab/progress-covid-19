@@ -11,7 +11,7 @@ library(tidyverse)
 library(usmap)
 ```
 
-Data downloaded from <https://github.com/nytimes/covid-19-data> assembled by The New York Times. Rmd file to generate this is in <https://github.com/piquelab/progress-covid-19>
+Data downloaded from <https://github.com/nytimes/covid-19-data> assembled by The New York Times. Rmd file to generate this is in <https://github.com/piquelab/progress-covid-19>. The plots are similar to those reported earlier by <https://www.ft.com/coronavirus-latest>.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 dc = read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
