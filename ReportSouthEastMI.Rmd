@@ -1,7 +1,7 @@
 ---
 title: "South East Michigan Covid-19 Report"
 author: "Roger Pique-Regi"
-date: "3/29/2020"
+##date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: html_document
 ---
 
@@ -15,8 +15,8 @@ Data downloaded from <https://github.com/nytimes/covid-19-data> assembled by The
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 dc = read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
-cat("Last Update:",as.character.Date(select(dc[nrow(dc),],date))[4],"\n")
 ```
+Last update: `r select(dc[nrow(dc),],date)`
 
 Counties aggregated: "Wayne","Oakland","Macomb","Livingston","St. Clair","Lapeer","Genesee","Washtenaw","Monroe","Lenawee"
 
