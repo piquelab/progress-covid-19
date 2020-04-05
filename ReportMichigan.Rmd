@@ -1,0 +1,128 @@
+---
+title: "Michigan Covid-19 Report"
+author: "Roger Pique-Regi"
+##date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(usmap)
+library(RcppRoll)
+```
+
+Data assembled by The New York Times downloaded from <https://github.com/nytimes/covid-19-data>.
+Death rate in MI downloaded from [here](https://www.mdch.state.mi.us/pha/osr/deaths/causrankcnty.asp) also from CDC [here](https://www.cdc.gov/nchs/pressroom/sosmap/flu_pneumonia_mortality/flu_pneumonia.htm). Rmd file to generate this is in <https://github.com/piquelab/progress-covid-19>. The plots are similar to those reported earlier by <https://www.ft.com/coronavirus-latest>.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+dc = read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
+sd = read_csv("./causrankcnty_2018.csv",comment = "#")
+cdc = read_csv("Influenza_Pneumonia_Mortality_by_State.csv")
+```
+Last update: `r select(dc[nrow(dc),],date)`
+
+## Deaths in MI compared to NY and CA (log-scale)
+
+```{r echo=FALSE}
+dd <- dc %>% filter(state %in% c("Michigan","New York","California")) %>% group_by(state,date) %>% summarize(deaths=sum(deaths),cases=sum(cases)) 
+##sd2 <- filter(sd,MI_Total<10000)
+flu=c("MI"=1871,"NY"=4749)
+dd %>% filter(deaths>=10) %>% mutate(days=(rank(date)-1)) %>%
+ggplot(aes(x=days,y=deaths,color=state)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(trans='log10',limits = c(10,5000),
+##                     sec.axis =sec_axis(~ . , name = "2018 Deaths",
+##                                        breaks = sd2$MI_Total,
+##                                        labels = sd2$`Cause of Death`)
+                     ) +
+  geom_abline(aes(intercept=log10(10),slope=log10(2)/2),lty=3) +
+  geom_abline(aes(intercept=log10(10),slope=log10(2)/3),lty=2) +
+ # geom_text(aes(label="2x in 2 days",x=2,y=20+30,angle=atan2(1,2)/pi*180),hjust=0,vjust=0) +
+#  geom_text(aes(label="2x in 3 days",x=3,y=20+30,angle=atan2(1,3)/pi*180),hjust=0,vjust=0) +
+    geom_hline(aes(yintercept=1871),lty=4) +
+    geom_text(aes(label="Total 2018 pneumonia + flu deaths in MI (ICD-10 codes J10-J18)",x=0,y=1871),hjust=0,vjust=1.5) +
+    geom_hline(aes(yintercept=4749),lty=4) +
+    geom_text(aes(label="Total 2018 pneumonia + flu deaths in NY (ICD-10 codes J10-J18)",x=0,y=4749),hjust=0,vjust=1.5) +
+  xlab("Days since 10th death") + ylab("Total deaths") + 
+  theme_bw()
+```
+
+* Dotted line 2x increase every two days
+* Dashed line 2x increase every three days 
+* Horizontal lines represent the total pneumonia and influenza related deaths in 2018 with ICD-10 codes J10-J18 (from NY and MI). Note that not all pneumonias are caused by viral or flu infections. 
+
+## Deaths in MI compared to NY and CA (linear scale)
+
+```{r echo=FALSE, warning=FALSE}
+dd %>% filter(deaths>=10) %>% mutate(days=(rank(date)-1)) %>%
+ggplot(aes(x=days,y=deaths,color=state)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(limits = c(10,NA),
+##                     sec.axis =sec_axis(~ . , name = "2018 Deaths",
+##                                        breaks = sd2$MI_Total,
+##                                        labels = sd2$`Cause of Death`)
+                     ) +
+    geom_hline(aes(yintercept=1871),lty=4) +
+    geom_text(aes(label="Total 2018 pneumonia + flu deaths in MI (ICD-10 codes J10-J18)",x=0,y=1871),hjust=0,vjust=1.5) +
+      geom_hline(aes(yintercept=4749),lty=4) +
+    geom_text(aes(label="Total 2018 pneumonia + flu deaths in NY (ICD-10 codes J10-J18)",x=0,y=4749),hjust=0,vjust=1.5) +
+  xlab("Days since 10th death") + ylab("Total deaths") + 
+  theme_bw()
+```
+
+
+## Average Daily New Deaths in MI compared to NY and CA 
+```{r echo=FALSE, warning=FALSE}
+dd <- dc %>% filter(state %in% c("Michigan","New York","California")) %>% group_by(state,date) %>% summarize(deaths=sum(deaths),cases=sum(cases)) 
+
+
+##sd2 <- filter(sd,MI_Total<10000)
+flu=c("MI"=1871,"NY"=4749)
+dd2 <- dd  %>% group_by(state) %>% 
+  mutate(newd=c(0,diff(deaths)),
+         newc=c(0,diff(cases)),
+         newd7avg=roll_meanr(newd,7),
+         newc7avg=roll_meanr(newc,7))
+dd2 %>% filter(newd7avg>=10) %>% mutate(days=(rank(date)-1)) %>% 
+ggplot(aes(x=days,y=newd7avg,color=state)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(trans='log10',limits = c(5,NA),
+                     sec.axis =sec_axis(~ . , name = "2018 Deaths",
+                                        breaks = sd$MI_Total/365,
+                                        labels = sd$`Cause of Death`)
+                     ) +
+    geom_hline(aes(yintercept=98985/365*0.072),lty=4) +
+    geom_text(aes(label="MI Peak P+I expected",x=0,y=98985/365*0.08),hjust=0,vjust=1.5,color="green4") +
+      geom_hline(aes(yintercept=1871/30),lty=4) +
+    geom_text(aes(label="MI if all P+I deaths in 30 days",x=0,y=1871/30),hjust=0,vjust=1.5,color="green4") +
+        geom_hline(aes(yintercept=1871/120),lty=4) +
+    geom_text(aes(label="MI if all P+I deaths in 120 days",x=0,y=1871/120),hjust=0,vjust=1.5,color="green4") +
+
+##    geom_hline(aes(yintercept=4749),lty=4) +
+##    geom_text(aes(label="Total 2018 pneumonia + flu deaths in NY (ICD-10 codes J10-J18)",x=0,y=4749),hjust=0,vjust=1.5) +
+  xlab("Days since 10th death") + ylab("New Daily deaths (avg. over 7 days, log-scale)") + 
+  theme_bw()
+```
+
+Tick marks on the right side represent the daily rates for each of the 10 top causes of death in Michigan if the rate was constant across the full year. The top and bottom horizontal lines represent the daily rates if all the pneumonia and influeza related deaths were concentrated in 120 days or 30 days for the full year using 2018 Michigan data. Note that not all pneumonias are caused by viral or flu infections (all ICD-10 codes J10-J18 aggregated together). The middle line is the approximated treshold (~7.2% of all deaths adjusted by the average flu casualty rate at the 12 weak of the year) that would be used to declare a flu epidemic by the National Center for Health Statistics (NCHS) mortality surveillance data. Current US rates through March 26, 2020, 8.2% of the deaths occurring during the week ending March 21, 2020 (week 12) were due to P&I. This percentage is above the epidemic threshold of 7.2% for week 12.
+
+
+
+## Cases in Michigan compared to NY and CA
+```{r echo=FALSE}
+##dd <- dc %>% filter(state=="Michigan") %>% group_by(date) %>%
+dd <- dc %>% filter(state %in% c("Michigan","New York","California")) %>% group_by(state,date) %>% 
+summarize(deaths=sum(deaths),cases=sum(cases)) %>% filter(cases>=100) %>% mutate(days=(rank(date)-1))
+
+ggplot(dd,aes(x=days,y=cases,color=state)) + 
+  geom_line(lwd=2,alpha=0.5) + geom_point(size=4) +
+  scale_y_continuous(trans='log10',limits = c(100,NA)) +
+  geom_abline(aes(intercept=log10(100),slope=log10(2)/2),lty=3) +
+  geom_abline(aes(intercept=log10(100),slope=log10(2)/3),lty=2) +
+  geom_text(aes(label="2x in 2 days",x=2,y=200,angle=atan2(1,2)/pi*180),hjust=0,vjust=0) +
+    geom_text(aes(label="2x in 3 days",x=3,y=200,angle=atan2(1,3)/pi*180),hjust=0,vjust=0) +
+  xlab("Days since 100th detected case") + ylab("Detected cases") +
+  theme_bw()
+##knitr::kable(dd)
+```
